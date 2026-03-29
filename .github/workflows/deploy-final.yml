@@ -1,0 +1,42 @@
+name: Deploy Final Clean Site
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+        - production
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Prepare clean files
+        run: |
+          # 创建最小化的静态站点
+          mkdir -p final-deploy
+          
+          # 复制只必要的文件
+          cp cloudflare-pages-deploy/index.html final-deploy/
+          cp cloudflare-pages-deploy/_headers final-deploy/
+          cp cloudflare-pages-deploy/_redirects final-deploy/
+          
+          # 验证文件大小
+          echo "=== 文件检查 ==="
+          du -sh final-deploy/
+          ls -la final-deploy/
+          
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/pages-action@v1
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          projectName: image-bg-remover-final
+          directory: ./final-deploy
