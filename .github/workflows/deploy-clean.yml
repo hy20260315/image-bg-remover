@@ -1,0 +1,34 @@
+name: Deploy Clean Static Site
+
+on:
+  workflow_dispatch:  # 手动触发
+    inputs:
+      environment:
+        description: 'Environment to deploy'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+        - production
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Create clean deploy directory
+        run: |
+          mkdir -p clean-deploy
+          cp cloudflare-pages-deploy/index.html clean-deploy/
+          cp cloudflare-pages-deploy/_headers clean-deploy/
+          cp cloudflare-pages-deploy/_redirects clean-deploy/
+          
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/pages-action@v1
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          projectName: image-bg-remover-pro
+          directory: ./clean-deploy
