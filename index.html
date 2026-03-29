@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>图片背景移除工具 - 外部版本</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .upload-area {
+            transition: all 0.3s ease;
+        }
+        .upload-area:hover {
+            border-color: #3B82F6;
+            background-color: #EFF6FF;
+        }
+        .upload-area.dragover {
+            border-color: #3B82F6;
+            background-color: #EFF6FF;
+        }
+        .image-preview {
+            max-height: 400px;
+            object-fit: contain;
+        }
+        .loading-spinner {
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen py-8">
+    <div class="container mx-auto px-4 max-w-6xl">
+        <!-- 页面标题 -->
+        <div class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-gray-800 mb-2">
+                <i class="fas fa-image mr-3 text-blue-600"></i>
+                图片背景移除工具
+            </h1>
+            <p class="text-gray-600 text-lg">
+                <i class="fas fa-check-circle text-green-500 mr-2"></i>
+                集成真实 Remove.bg API，专业级背景移除服务
+            </p>
+            <div class="mt-4 bg-blue-50 rounded-lg p-3 inline-block">
+                <p class="text-sm text-blue-700">
+                    <i class="fas fa-info-circle mr-2"></i>
+                    当前状态: <span class="font-semibold">API 已配置</span>
+                </p>
+            </div>
+        </div>
+
+        <!-- 主要内容区域 -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- 左侧：上传区域 -->
+            <div class="lg:col-span-2">
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <h2 class="text-2xl font-semibold mb-6 text-gray-800">
+                        <i class="fas fa-upload mr-2 text-blue-500"></i>
+                        上传图片
+                    </h2>
+                    
+                    <!-- 上传区域 -->
+                    <div id="uploadArea" class="upload-area border-2 border-dashed border-gray-300 rounded-lg p-12 text-center cursor-pointer">
+                        <div id="uploadContent">
+                            <i class="fas fa-cloud-upload-alt text-6xl text-gray-400 mb-6"></i>
+                            <h3 class="text-xl font-semibold text-gray-700 mb-2">拖拽图片到这里</h3>
+                            <p class="text-gray-600 mb-6">或者点击选择文件</p>
+                            <button id="selectFileBtn" class="bg-blue-500 text-white px-8 py-3 rounded-lg hover:bg-blue-600 transition-colors shadow-md">
+                                <i class="fas fa-folder-open mr-2"></i>
+                                选择图片文件
+                            </button>
+                            <p class="text-sm text-gray-500 mt-4">
+                                支持 JPG、PNG、WebP、GIF 格式，最大 10MB
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <input type="file" id="fileInput" accept="image/*" class="hidden">
+                    
+                    <!-- 预览区域 -->
+                    <div id="previewArea" class="hidden mt-8">
+                        <h3 class="text-xl font-semibold mb-4 text-gray-800">
+                            <i class="fas fa-eye mr-2 text-green-500"></i>
+                            图片预览
+                        </h3>
+                        <div class="bg-gray-100 rounded-lg p-6">
+                            <img id="previewImage" class="image-preview w-full rounded-lg shadow-md" alt="预览图片">
+                            <div class="mt-4 flex justify-between items-center">
+                                <div class="text-sm text-gray-600">
+                                    <span id="fileName"></span>
+                                    <span id="fileSize" class="ml-2"></span>
+                                </div>
+                                <div class="space-x-2">
+                                    <button id="removeBtn" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors">
+                                        <i class="fas fa-trash mr-2"></i>
+                                        移除
+                                    </button>
+                                    <button id="processBtn" class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors">
+                                        <i class="fas fa-magic mr-2"></i>
+                                        开始处理
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 背景设置 -->
+                    <div id="bgSettingsArea" class="hidden mt-8">
+                        <h3 class="text-xl font-semibold mb-4 text-gray-800">
+                            <i class="fas fa-palette mr-2 text-purple-500"></i>
+                            背景设置
+                        </h3>
+                        <div class="bg-purple-50 rounded-lg p-6">
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">背景类型</label>
+                                    <select id="bgType" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                        <option value="auto">🔍 自动透明背景</option>
+                                        <option value="white">⚪ 白色背景</option>
+                                        <option value="transparent">✨ 完全透明背景</option>
+                                        <option value="custom">🎨 自定义背景色</option>
+                                    </select>
+                                </div>
+                                <div id="customColorArea" class="hidden">
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">自定义背景色</label>
+                                    <div class="flex space-x-2">
+                                        <input type="color" id="bgColor" value="#ffffff" class="w-12 h-10 rounded border border-gray-300">
+                                        <input type="text" id="bgColorText" value="#ffffff" placeholder="#ffffff" class="flex-1 p-2 border border-gray-300 rounded-lg">
+                                    </div>
+                                </div>
+                                <button id="confirmSettingsBtn" class="w-full bg-purple-500 text-white px-6 py-3 rounded-lg hover:bg-purple-600 transition-colors">
+                                    <i class="fas fa-check mr-2"></i>
+                                    确认设置并开始处理
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 处理状态 -->
+                    <div id="processingArea" class="hidden mt-8">
+                        <h3 class="text-xl font-semibold mb-4 text-gray-800">
+                            <i class="fas fa-cog fa-spin mr-2 text-blue-500"></i>
+                            正在处理中...
+                        </h3>
+                        <div class="bg-blue-50 rounded-lg p-6">
+                            <div class="flex items-center justify-between mb-4">
+                                <span class="text-blue-700 font-medium">处理进度</span>
+                                <span id="progressText" class="text-blue-700 font-medium">0%</span>
+                            </div>
+                            <div class="w-full bg-blue-200 rounded-full h-3">
+                                <div id="progressBar" class="bg-blue-600 h-3 rounded-full transition-all duration-300" style="width: 0%"></div>
+                            </div>
+                            <div class="mt-4">
+                                <p class="text-sm text-blue-600">
+                                    <i class="fas fa-info-circle mr-2"></i>
+                                    使用 Remove.bg API 进行专业背景移除
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 结果区域 -->
+                    <div id="resultArea" class="hidden mt-8">
+                        <h3 class="text-xl font-semibold mb-4 text-gray-800">
+                            <i class="fas fa-check-circle mr-2 text-green-500"></i>
+                            处理完成
+                        </h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="bg-gray-100 rounded-lg p-4">
+                                <h4 class="font-medium mb-2 text-gray-700">原始图片</h4>
+                                <img id="originalImage" class="w-full h-64 object-cover rounded-lg" alt="原始图片">
+                            </div>
+                            <div class="bg-gray-100 rounded-lg p-4">
+                                <h4 class="font-medium mb-2 text-gray-700">处理后图片</h4>
+                                <img id="processedImage" class="w-full h-64 object-cover rounded-lg" alt="处理后图片">
+                                <div class="mt-4 space-y-2">
+                                    <button id="downloadBtn" class="w-full bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors">
+                                        <i class="fas fa-download mr-2"></i>
+                                        下载图片
+                                    </button>
+                                    <button id="newUploadBtn" class="w-full bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors">
+                                        <i class="fas fa-plus mr-2"></i>
+                                        上传新图片
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 右侧：信息面板 -->
+            <div class="space-y-6">
+                <!-- 功能介绍 -->
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <h3 class="text-xl font-semibold mb-4 text-gray-800">
+                        <i class="fas fa-info-circle mr-2 text-blue-500"></i>
+                        功能特点
+                    </h3>
+                    <ul class="space-y-3">
+                        <li class="flex items-center">
+                            <i class="fas fa-check text-green-500 mr-3"></i>
+                            <span class="text-gray-700">一键移除图片背景</span>
+                        </li>
+                        <li class="flex items-center">
+                            <i class="fas fa-check text-green-500 mr-3"></i>
+                            <span class="text-gray-700">高质量AI处理</span>
+                        </li>
+                        <li class="flex items-center">
+                            <i class="fas fa-check text-green-500 mr-3"></i>
+                            <span class="text-gray-700">支持多种图片格式</span>
+                        </li>
+                        <li class="flex items-center">
+                            <i class="fas fa-check text-green-500 mr-3"></i>
+                            <span class="text-gray-700">完全免费使用</span>
+                        </li>
+                        <li class="flex items-center">
+                            <i class="fas fa-check text-green-500 mr-3"></i>
+                            <span class="text-gray-700">实时预览效果</span>
+                        </li>
+                    </ul>
+                </div>
+                
+                <!-- 使用说明 -->
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <h3 class="text-xl font-semibold mb-4 text-gray-800">
+                        <i class="fas fa-question-circle mr-2 text-purple-500"></i>
+                        使用说明
+                    </h3>
+                    <ol class="space-y-2 text-sm text-gray-600">
+                        <li>1. 点击或拖拽上传图片</li>
+                        <li>2. 预览图片并确认</li>
+                        <li>3. 点击"开始处理"按钮</li>
+                        <li>4. 等待AI处理完成</li>
+                        <li>5. 下载处理后的图片</li>
+                    </ol>
+                </div>
+                
+                <!-- 联系信息 -->
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <h3 class="text-xl font-semibold mb-4 text-gray-800">
+                        <i class="fas fa-envelope mr-2 text-green-500"></i>
+                        联系我们
+                    </h3>
+                    <p class="text-sm text-gray-600">
+                        如有问题或建议，请随时联系我们。我们会尽快回复！
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Remove.bg API 配置
+        const REMOVE_BG_API_KEY = 'Dup5WHfQmPk7xwX9dZ1vHzSr';
+        const REMOVE_BG_API_URL = 'https://api.remove.bg/v1.0/removebg';
+        
+        // DOM 元素
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const selectFileBtn = document.getElementById('selectFileBtn');
+        const previewArea = document.getElementById('previewArea');
+        const bgSettingsArea = document.getElementById('bgSettingsArea');
+        const processingArea = document.getElementById('processingArea');
+        const resultArea = document.getElementById('resultArea');
+        const previewImage = document.getElementById('previewImage');
+        const fileName = document.getElementById('fileName');
+        const fileSize = document.getElementById('fileSize');
+        const originalImage = document.getElementById('originalImage');
+        const processedImage = document.getElementById('processedImage');
+        const removeBtn = document.getElementById('removeBtn');
+        const processBtn = document.getElementById('processBtn');
+        const confirmSettingsBtn = document.getElementById('confirmSettingsBtn');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const newUploadBtn = document.getElementById('newUploadBtn');
+        const bgType = document.getElementById('bgType');
+        const customColorArea = document.getElementById('customColorArea');
+        const bgColor = document.getElementById('bgColor');
+        const bgColorText = document.getElementById('bgColorText');
+        const progressBar = document.getElementById('progressBar');
+        const progressText = document.getElementById('progressText');
+        
+        let selectedFile = null;
+        let bgSettings = { type: 'auto' };
+        
+        // 事件监听器
+        selectFileBtn.addEventListener('click', () => fileInput.click());
+        uploadArea.addEventListener('click', () => fileInput.click());
+        
+        fileInput.addEventListener('change', handleFileSelect);
+        
+        // 拖拽事件
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+        
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+        
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFileSelect({ target: { files: files } });
+            }
+        });
+        
+        // 处理文件选择
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            console.log('File selected:', file);
+            
+            // 验证文件类型
+            if (!file.type.startsWith('image/')) {
+                alert('请选择图片文件！');
+                return;
+            }
+            
+            // 验证文件大小
+            if (file.size > 10 * 1024 * 1024) {
+                alert('文件大小不能超过10MB！');
+                return;
+            }
+            
+            selectedFile = file;
+            
+            // 显示预览
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                console.log('File loaded successfully');
+                previewImage.src = e.target.result;
+                fileName.textContent = file.name;
+                fileSize.textContent = `(${(file.size / 1024 / 1024).toFixed(2)} MB)`;
+                
+                // 显示预览区域
+                uploadArea.classList.add('hidden');
+                previewArea.classList.remove('hidden');
+            };
+            reader.readAsDataURL(file);
+        }
+        
+        // 移除按钮
+        removeBtn.addEventListener('click', resetToUpload);
+        
+        // 背景类型选择
+        bgType.addEventListener('change', (e) => {
+            const value = e.target.value;
+            if (value === 'custom') {
+                customColorArea.classList.remove('hidden');
+            } else {
+                customColorArea.classList.add('hidden');
+            }
+            bgSettings.type = value;
+        });
+        
+        // 颜色选择器同步
+        bgColor.addEventListener('change', (e) => {
+            bgColorText.value = e.target.value;
+            bgSettings.color = e.target.value;
+        });
+        
+        bgColorText.addEventListener('input', (e) => {
+            bgColor.value = e.target.value;
+            bgSettings.color = e.target.value;
+        });
+        
+        // 处理按钮 - 显示背景设置
+        processBtn.addEventListener('click', () => {
+            if (!selectedFile) {
+                alert('请先选择图片！');
+                return;
+            }
+            
+            console.log('Showing background settings');
+            
+            // 显示背景设置
+            previewArea.classList.add('hidden');
+            bgSettingsArea.classList.remove('hidden');
+            processingArea.classList.add('hidden');
+            resultArea.classList.add('hidden');
+        });
+        
+        // 确认设置并处理
+        confirmSettingsBtn.addEventListener('click', async () => {
+            if (!selectedFile) {
+                alert('请先选择图片！');
+                return;
+            }
+            
+            console.log('Processing with settings:', bgSettings);
+            
+            // 隐藏设置，显示处理状态
+            bgSettingsArea.classList.add('hidden');
+            processingArea.classList.remove('hidden');
+            resultArea.classList.add('hidden');
+            
+            // 调用 Remove.bg API
+            await processWithRemoveBgAPI(selectedFile, bgSettings);
+        });
+        
+        // 显示结果
+        function showResult() {
+            console.log('Showing result');
+            
+            // 显示处理结果
+            processingArea.classList.add('hidden');
+            resultArea.classList.remove('hidden');
+            
+            // 显示原始图片
+            originalImage.src = URL.createObjectURL(selectedFile);
+            
+            // 显示处理后的图片
+            processedImage.src = URL.createObjectURL(selectedFile);
+        }
+        
+        // 使用 Remove.bg API 处理图片
+        async function processWithRemoveBgAPI(file, settings) {
+            try {
+                // 更新进度
+                updateProgress(10, '正在上传图片...');
+                
+                const formData = new FormData();
+                formData.append('image_file', file);
+                
+                // 根据设置配置API参数
+                const apiParams = {
+                    size: 'auto',
+                    type: settings.type === 'auto' ? 'auto' : 'person',
+                    format: 'png'
+                };
+                
+                if (settings.type === 'custom') {
+                    apiParams.bg_color = settings.color || '#ffffff';
+                } else if (settings.type === 'white') {
+                    apiParams.bg_color = '#ffffff';
+                } else if (settings.type === 'transparent') {
+                    apiParams.bg_color = 'transparent';
+                }
+                
+                formData.append('size', apiParams.size);
+                formData.append('type', apiParams.type);
+                formData.append('format', apiParams.format);
+                
+                if (apiParams.bg_color && apiParams.bg_color !== 'transparent') {
+                    formData.append('bg_color', apiParams.bg_color);
+                }
+                
+                // 发送API请求
+                updateProgress(30, '正在调用 Remove.bg API...');
+                
+                const response = await fetch(REMOVE_BG_API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'X-API-Key': REMOVE_BG_API_KEY,
+                    },
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`Remove.bg API 错误: ${response.status} - ${errorText}`);
+                }
+                
+                updateProgress(70, '正在处理图片...');
+                
+                // 获取处理后的图片
+                const blob = await response.blob();
+                const imageUrl = URL.createObjectURL(blob);
+                
+                updateProgress(90, '正在完成处理...');
+                
+                // 显示处理结果
+                setTimeout(() => {
+                    // 显示原始图片
+                    originalImage.src = URL.createObjectURL(file);
+                    
+                    // 显示处理后的图片
+                    processedImage.src = imageUrl;
+                    
+                    // 完成处理
+                    updateProgress(100, '处理完成！');
+                    setTimeout(() => {
+                        processingArea.classList.add('hidden');
+                        resultArea.classList.remove('hidden');
+                    }, 500);
+                }, 1000);
+                
+            } catch (error) {
+                console.error('API 处理错误:', error);
+                
+                // 显示错误信息
+                updateProgress(0, '处理失败');
+                setTimeout(() => {
+                    const errorDiv = document.createElement('div');
+                    errorDiv.className = 'bg-red-50 border border-red-200 rounded-lg p-4 mt-4';
+                    errorDiv.innerHTML = `
+                        <div class="flex items-center">
+                            <i class="fas fa-exclamation-circle text-red-500 mr-2"></i>
+                            <span class="text-red-700 font-medium">处理失败</span>
+                        </div>
+                        <p class="text-red-600 text-sm mt-2">${error.message}</p>
+                        <button onclick="resetToUpload()" class="mt-2 text-red-600 text-sm hover:underline">
+                            <i class="fas fa-redo mr-1"></i>
+                            重新上传
+                        </button>
+                    `;
+                    processingArea.appendChild(errorDiv);
+                }, 500);
+            }
+        }
+        
+        // 更新进度
+        function updateProgress(percent, message) {
+            progressBar.style.width = percent + '%';
+            progressText.textContent = percent + '%';
+            
+            // 更新状态文本
+            const statusText = document.querySelector('#processingArea .text-blue-700.font-medium');
+            if (statusText) {
+                statusText.textContent = message;
+            }
+        }
+        
+        // 重置到上传状态
+        function resetToUpload() {
+            selectedFile = null;
+            fileInput.value = '';
+            processingArea.classList.add('hidden');
+            bgSettingsArea.classList.add('hidden');
+            resultArea.classList.add('hidden');
+            uploadArea.classList.remove('hidden');
+        }
+        
+        // 下载按钮
+        downloadBtn.addEventListener('click', () => {
+            const link = document.createElement('a');
+            link.download = `processed_${selectedFile.name}`;
+            link.href = URL.createObjectURL(selectedFile);
+            link.click();
+            
+            // 显示下载提示
+            const toast = document.createElement('div');
+            toast.className = 'fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50';
+            toast.textContent = '✅ 下载已开始';
+            document.body.appendChild(toast);
+            setTimeout(() => {
+                document.body.removeChild(toast);
+            }, 3000);
+        });
+        
+        // 新上传按钮
+        newUploadBtn.addEventListener('click', resetToUpload);
+    </script>
+</body>
+</html>

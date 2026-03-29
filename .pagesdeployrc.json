@@ -1,0 +1,19 @@
+{
+  "projectId": "image-bg-remover",
+  "account": {
+    "id": "f86e13b5d44cb8bf4ecc8e85bddc0e9b",
+    "name": "相见是缘"
+  },
+  "build": {
+    "command": "npm run build",
+    "outputDirectory": "./",
+    "rootDirectory": "./cloudflare-pages-deploy"
+  },
+  "environment": {
+    "branch": "main"
+  },
+  "notifications": {
+    "enabled": true,
+    "slack": null
+  }
+}

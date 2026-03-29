@@ -1,0 +1,19 @@
+{
+  "name": "image-bg-remover",
+  "version": "1.0.0",
+  "description": "专业的图片背景移除工具，基于 Remove.bg API",
+  "main": "index.html",
+  "scripts": {
+    "build": "echo 'Static site ready'",
+    "dev": "npm run build",
+    "preview": "npm run build && echo 'Project ready for deployment'"
+  },
+  "keywords": [
+    "image-background-remover",
+    "remove-bg",
+    "cloudflare-pages",
+    "static-site"
+  ],
+  "author": "相见是缘",
+  "license": "MIT"
+}
