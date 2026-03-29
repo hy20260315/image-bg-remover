@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>图片背景移除工具 - Cloudflare Pages 版</title>
+    <title>图片背景移除工具 - 外部版本</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -22,6 +22,13 @@
             max-height: 400px;
             object-fit: contain;
         }
+        .loading-spinner {
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body class="bg-gray-50 min-h-screen py-8">
@@ -33,15 +40,13 @@
                 图片背景移除工具
             </h1>
             <p class="text-gray-600 text-lg">
-                <i class="fas fa-rocket text-green-500 mr-2"></i>
-                由 Cloudflare Pages 部署的专业服务
+                <i class="fas fa-check-circle text-green-500 mr-2"></i>
+                集成真实 Remove.bg API，专业级背景移除服务
             </p>
-            <div class="mt-4 bg-green-50 rounded-lg p-3 inline-block">
-                <p class="text-sm text-green-700">
-                    <i class="fas fa-check-circle mr-2"></i>
-                    状态: <span class="font-semibold">已部署</span> | 
-                    <i class="fas fa-cloud mr-2"></i>
-                    CDN: <span class="font-semibold">全球加速</span>
+            <div class="mt-4 bg-blue-50 rounded-lg p-3 inline-block">
+                <p class="text-sm text-blue-700">
+                    <i class="fas fa-info-circle mr-2"></i>
+                    当前状态: <span class="font-semibold">API 已配置</span>
                 </p>
             </div>
         </div>
@@ -188,32 +193,6 @@
             
             <!-- 右侧：信息面板 -->
             <div class="space-y-6">
-                <!-- 服务信息 -->
-                <div class="bg-white rounded-xl shadow-lg p-6">
-                    <h3 class="text-xl font-semibold mb-4 text-gray-800">
-                        <i class="fas fa-server mr-2 text-blue-500"></i>
-                        服务信息
-                    </h3>
-                    <div class="space-y-3">
-                        <div class="flex items-center">
-                            <i class="fas fa-cloud text-green-500 mr-3"></i>
-                            <span class="text-gray-700">Cloudflare Pages</span>
-                        </div>
-                        <div class="flex items-center">
-                            <i class="fas fa-rocket text-blue-500 mr-3"></i>
-                            <span class="text-gray-700">全球 CDN 加速</span>
-                        </div>
-                        <div class="flex items-center">
-                            <i class="fas fa-shield-alt text-purple-500 mr-3"></i>
-                            <span class="text-gray-700">DDoS 防护</span>
-                        </div>
-                        <div class="flex items-center">
-                            <i class="fas fa-lock text-red-500 mr-3"></i>
-                            <span class="text-gray-700">HTTPS 加密</span>
-                        </div>
-                    </div>
-                </div>
-                
                 <!-- 功能介绍 -->
                 <div class="bg-white rounded-xl shadow-lg p-6">
                     <h3 class="text-xl font-semibold mb-4 text-gray-800">
@@ -253,11 +232,21 @@
                     <ol class="space-y-2 text-sm text-gray-600">
                         <li>1. 点击或拖拽上传图片</li>
                         <li>2. 预览图片并确认</li>
-                        <li>3. 选择背景处理类型</li>
-                        <li>4. 点击"开始处理"按钮</li>
-                        <li>5. 等待AI处理完成</li>
-                        <li>6. 下载处理后的图片</li>
+                        <li>3. 点击"开始处理"按钮</li>
+                        <li>4. 等待AI处理完成</li>
+                        <li>5. 下载处理后的图片</li>
                     </ol>
+                </div>
+                
+                <!-- 联系信息 -->
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <h3 class="text-xl font-semibold mb-4 text-gray-800">
+                        <i class="fas fa-envelope mr-2 text-green-500"></i>
+                        联系我们
+                    </h3>
+                    <p class="text-sm text-gray-600">
+                        如有问题或建议，请随时联系我们。我们会尽快回复！
+                    </p>
                 </div>
             </div>
         </div>
@@ -357,6 +346,9 @@
             reader.readAsDataURL(file);
         }
         
+        // 移除按钮
+        removeBtn.addEventListener('click', resetToUpload);
+        
         // 背景类型选择
         bgType.addEventListener('change', (e) => {
             const value = e.target.value;
@@ -412,6 +404,21 @@
             // 调用 Remove.bg API
             await processWithRemoveBgAPI(selectedFile, bgSettings);
         });
+        
+        // 显示结果
+        function showResult() {
+            console.log('Showing result');
+            
+            // 显示处理结果
+            processingArea.classList.add('hidden');
+            resultArea.classList.remove('hidden');
+            
+            // 显示原始图片
+            originalImage.src = URL.createObjectURL(selectedFile);
+            
+            // 显示处理后的图片
+            processedImage.src = URL.createObjectURL(selectedFile);
+        }
         
         // 使用 Remove.bg API 处理图片
         async function processWithRemoveBgAPI(file, settings) {
@@ -531,17 +538,11 @@
             uploadArea.classList.remove('hidden');
         }
         
-        // 移除按钮
-        removeBtn.addEventListener('click', resetToUpload);
-        
-        // 新上传按钮
-        newUploadBtn.addEventListener('click', resetToUpload);
-        
         // 下载按钮
         downloadBtn.addEventListener('click', () => {
             const link = document.createElement('a');
             link.download = `processed_${selectedFile.name}`;
-            link.href = processedImage.src;
+            link.href = URL.createObjectURL(selectedFile);
             link.click();
             
             // 显示下载提示
@@ -553,6 +554,9 @@
                 document.body.removeChild(toast);
             }, 3000);
         });
+        
+        // 新上传按钮
+        newUploadBtn.addEventListener('click', resetToUpload);
     </script>
 </body>
 </html>
