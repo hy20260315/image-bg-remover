@@ -1,0 +1,12 @@
+# 排除不需要的文件和目录
+node_modules/
+.git/
+.github/
+.DS_Store
+*.log
+*.tmp
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
